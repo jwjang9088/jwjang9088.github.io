@@ -12,7 +12,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
       pages: write
       id-token: write
     environment:
@@ -23,35 +22,6 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: Import prepared portfolio on first deployment
-        if: hashFiles('portfolio-source.zip.part01') != ''
-        shell: bash
-        run: |
-          cat portfolio-source.zip.part0{1,2,3,4,5,6} > "$RUNNER_TEMP/portfolio-source.zip"
-          python - <<'PY'
-          import os, pathlib, zipfile, shutil
-          temporary = pathlib.Path(os.environ['RUNNER_TEMP'])
-          import hashlib
-          assert hashlib.sha256((temporary / 'portfolio-source.zip').read_bytes()).hexdigest() == '6395367b2038d61a0b06c935a942a9d15d7dc621d68634d517f84790d83440ca'
-          with zipfile.ZipFile(temporary / 'portfolio-source.zip') as archive:
-              archive.extractall(temporary / 'portfolio-source')
-          source = temporary / 'portfolio-source' / 'jaewon-portfolio'
-          for item in source.iterdir():
-              if item.name == '.github':
-                  continue
-              destination = pathlib.Path(item.name)
-              if item.is_dir():
-                  shutil.copytree(item, destination, dirs_exist_ok=True)
-              else:
-                  shutil.copy2(item, destination)
-          PY
-          python scripts/validate.py
-          rm portfolio-source.zip.part0{1,2,3,4,5,6}
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add index.html admin.html README.md .gitignore .nojekyll assets data images scripts portfolio-source.zip.part0{1,2,3,4,5,6}
-          git commit -m "Import portfolio source and project image folders"
-          git push origin HEAD:main
       - name: Validate and prepare public files
         run: python scripts/stage.py
       - uses: actions/configure-pages@v5
